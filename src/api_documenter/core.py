@@ -32,7 +32,7 @@ PARAMETERS_HEADING: str = "Parameters"
 RETURNS_HEADING: str = "Returns"
 
 
-def simplify_annotation(annotation):
+def _simplify_annotation(annotation):
     if annotation == Parameter.empty:
         return ""
     annotation = str(annotation)
@@ -285,7 +285,7 @@ class ModuleDocumentation:
         return markdown
 
 
-def extract_docstring_preamble(lines: List[str]) -> str:
+def _extract_docstring_preamble(lines: List[str]) -> str:
     if not lines:
         return ""
     preamble: List[str] = []
@@ -298,7 +298,7 @@ def extract_docstring_preamble(lines: List[str]) -> str:
     return "\n".join(preamble).strip()
 
 
-def extract_name_annotation_default(line: str) -> Tuple[str, str, str]:
+def _extract_name_annotation_default(line: str) -> Tuple[str, str, str]:
     name: str = ""
     annotation: str = ""
     default: str = ""
@@ -322,7 +322,7 @@ def extract_name_annotation_default(line: str) -> Tuple[str, str, str]:
     )
 
 
-def extract_docstring_parameters(lines: List[str]) -> List[ParameterDocumentation]:
+def _extract_docstring_parameters(lines: List[str]) -> List[ParameterDocumentation]:
     if not lines:
         return []
     while lines:
@@ -343,7 +343,7 @@ def extract_docstring_parameters(lines: List[str]) -> List[ParameterDocumentatio
         name: str
         annotation: str
         default: str
-        name, annotation, default = extract_name_annotation_default(line)
+        name, annotation, default = _extract_name_annotation_default(line)
         description: List[str] = []
         while lines:
             line = lines.pop(0)
@@ -359,7 +359,7 @@ def extract_docstring_parameters(lines: List[str]) -> List[ParameterDocumentatio
     return parameters
 
 
-def extract_docstring_returns(lines: List[str]) -> str:
+def _extract_docstring_returns(lines: List[str]) -> str:
     if not lines:
         return ""
     while lines:
@@ -377,16 +377,16 @@ def extract_docstring_returns(lines: List[str]) -> str:
     return line
 
 
-def process_function(func) -> FunctionDocumentation:
+def _process_function(func) -> FunctionDocumentation:
     assert "TODO" not in (
         func.__doc__ or ""
     ), f"The docstring for the function {func} is incomplete!"
     docstring: List[str] = (func.__doc__ or "").split("\n")
     name: str = func.__name__
-    description: str = extract_docstring_preamble(docstring)
+    description: str = _extract_docstring_preamble(docstring)
     signature: Signature = inspect.signature(func)
     signature_parameters: List[ParameterDocumentation] = []
-    docstring_parameters: List[ParameterDocumentation] = extract_docstring_parameters(
+    docstring_parameters: List[ParameterDocumentation] = _extract_docstring_parameters(
         docstring
     )
     key: str
@@ -408,10 +408,10 @@ def process_function(func) -> FunctionDocumentation:
                 filter(lambda _: _.name == key, docstring_parameters)
             )[0]
             assert doc_param.annotation == (
-                simplify_annotation(sig_param.annotation)
+                _simplify_annotation(sig_param.annotation)
             ), (
                 doc_param.annotation,
-                simplify_annotation(sig_param.annotation),
+                _simplify_annotation(sig_param.annotation),
             )
             default = sig_param.default if sig_param.default != Parameter.empty else ""
             assert doc_param.default == str(default), (
@@ -425,28 +425,28 @@ def process_function(func) -> FunctionDocumentation:
             signature_parameters.append(
                 ParameterDocumentation(
                     key,
-                    simplify_annotation(sig_param.annotation),
+                    _simplify_annotation(sig_param.annotation),
                     sig_param.default,
                     "",
                 )
             )
-    return_annotation: str = simplify_annotation(signature.return_annotation)
-    assert extract_docstring_returns(docstring) in [return_annotation, ""]
+    return_annotation: str = _simplify_annotation(signature.return_annotation)
+    assert _extract_docstring_returns(docstring) in [return_annotation, ""]
     return FunctionDocumentation(
         name, signature_parameters, return_annotation, description
     )
 
 
-def process_method(met) -> MethodDocumentation:
+def _process_method(met) -> MethodDocumentation:
     assert "TODO" not in (
         met.__doc__ or ""
     ), f"The docstring for the method {met} is incomplete!"
     docstring: List[str] = (met.__doc__ or "").split("\n")
     name: str = met.__name__
-    description: str = extract_docstring_preamble(docstring)
+    description: str = _extract_docstring_preamble(docstring)
     signature: Signature = inspect.signature(met)
     signature_parameters: List[ParameterDocumentation] = []
-    docstring_parameters: List[ParameterDocumentation] = extract_docstring_parameters(
+    docstring_parameters: List[ParameterDocumentation] = _extract_docstring_parameters(
         docstring
     )
     key: str
@@ -476,10 +476,10 @@ def process_method(met) -> MethodDocumentation:
                 filter(lambda _: _.name == key, docstring_parameters)
             )[0]
             assert doc_param.annotation == (
-                simplify_annotation(sig_param.annotation)
+                _simplify_annotation(sig_param.annotation)
             ), (
                 doc_param.annotation,
-                simplify_annotation(sig_param.annotation),
+                _simplify_annotation(sig_param.annotation),
             )
             default = sig_param.default if sig_param.default != Parameter.empty else ""
             assert doc_param.default == str(default), (
@@ -498,25 +498,25 @@ def process_method(met) -> MethodDocumentation:
                 signature_parameters.append(
                     ParameterDocumentation(
                         key,
-                        simplify_annotation(sig_param.annotation),
+                        _simplify_annotation(sig_param.annotation),
                         sig_param.default,
                         "",
                     )
                 )
-    return_annotation: str = simplify_annotation(signature.return_annotation)
-    assert extract_docstring_returns(docstring) in [return_annotation, ""]
+    return_annotation: str = _simplify_annotation(signature.return_annotation)
+    assert _extract_docstring_returns(docstring) in [return_annotation, ""]
     return MethodDocumentation(
         name, signature_parameters, return_annotation, description
     )
 
 
-def process_class(
+def _process_class(
     cls, objects_to_ignore: list, minimal_classes: list
 ) -> ClassDocumentation:
     docstring: List[str] = (cls.__doc__ or "").split("\n")
     name: str = cls.__name__
     parents: str = ", ".join(list(map(lambda _: _.__name__, cls.__bases__)))
-    description: str = extract_docstring_preamble(docstring)
+    description: str = _extract_docstring_preamble(docstring)
     signature: Signature = inspect.signature(cls.__init__)
     signature_parameters: List[ParameterDocumentation] = []
     key: str
@@ -525,7 +525,7 @@ def process_class(
     if (cls.__doc__ or "") != "" and PARAMETERS_HEADING in (cls.__doc__ or ""):
         docstring_parameters: List[
             ParameterDocumentation
-        ] = extract_docstring_parameters(docstring)
+        ] = _extract_docstring_parameters(docstring)
         assert len(docstring_parameters) == len(signature.parameters) - 1, (
             len(docstring_parameters),
             len(signature.parameters) - 1,
@@ -546,10 +546,10 @@ def process_class(
                 filter(lambda _: _.name == key, docstring_parameters)
             )[0]
             assert doc_param.annotation == (
-                simplify_annotation(sig_param.annotation)
+                _simplify_annotation(sig_param.annotation)
             ), (
                 doc_param.annotation,
-                simplify_annotation(sig_param.annotation),
+                _simplify_annotation(sig_param.annotation),
             )
             default = sig_param.default if sig_param.default != Parameter.empty else ""
             assert doc_param.default == str(default), (
@@ -563,7 +563,7 @@ def process_class(
             signature_parameters.append(
                 ParameterDocumentation(
                     key,
-                    simplify_annotation(sig_param.annotation),
+                    _simplify_annotation(sig_param.annotation),
                     sig_param.default,
                     "",
                 )
@@ -577,7 +577,7 @@ def process_class(
                 continue
             if not (inspect.ismethod(value) or inspect.isfunction(value)):
                 continue
-            methods.append(process_method(value))
+            methods.append(_process_method(value))
         methods.sort(key=lambda _: _.name)
     return ClassDocumentation(
         name,
@@ -588,12 +588,12 @@ def process_class(
     )
 
 
-def process_module(
+def _process_module(
     mod, objects_to_ignore: list, minimal_classes: list
 ) -> ModuleDocumentation:
     docstring: List[str] = (mod.__doc__ or "").split("\n")
     name: str = mod.__name__
-    description: str = extract_docstring_preamble(docstring)
+    description: str = _extract_docstring_preamble(docstring)
     classes: List[ClassDocumentation] = []
     functions: List[FunctionDocumentation] = []
     for key, value in inspect.getmembers(mod):
@@ -602,17 +602,64 @@ def process_module(
         elif value in objects_to_ignore:
             continue
         if inspect.isclass(value):
-            classes.append(process_class(value, objects_to_ignore, minimal_classes))
+            classes.append(_process_class(value, objects_to_ignore, minimal_classes))
         elif inspect.isfunction(value):
-            functions.append(process_function(value))
+            functions.append(_process_function(value))
     classes.sort(key=lambda _: _.name)
     functions.sort(key=lambda _: _.name)
     return ModuleDocumentation(name, classes, functions, description)
 
 
-def escape_link(link: str) -> str:
+def _escape_link(link: str) -> str:
     link = link.replace(".", "-")
     return link
+
+
+def process_functions(
+    functions_to_document: list,
+    latex_pagebreak: bool = False,
+) -> str:
+    """
+    TODO
+    """
+    function_documentations: List[FunctionDocumentation] = []
+    for func in functions_to_document:
+        assert inspect.isfunction(func), type(func)
+        function_documentations.append(_process_function(func))
+    function_documentations.sort(key=lambda _: _.name)
+    markdown: List[str] = []
+    doc: FunctionDocumentation
+    for func in function_documentations:
+        markdown.extend(doc.to_markdown())
+    output: str = "\n".join(markdown)
+    if not latex_pagebreak:
+        output = output.replace("\\pagebreak", "")
+    return output
+
+
+def process_classes(
+    classes_to_document: list,
+    module_name: str,
+    minimal_classes: list = [],
+    objects_to_ignore: list = [],
+    latex_pagebreak: bool = False,
+) -> str:
+    """
+    TODO
+    """
+    class_documentations: List[ClassDocumentation] = []
+    for cls in classes_to_document:
+        assert inspect.isclass(cls), type(cls)
+        class_documentations.append(_process_class(cls, objects_to_ignore, minimal_classes))
+    class_documentations.sort(key=lambda _: _.name)
+    markdown: List[str] = []
+    doc: ClassDocumentation
+    for doc in class_documentations:
+        markdown.extend(doc.to_markdown(module_name))
+    output: str = "\n".join(markdown)
+    if not latex_pagebreak:
+        output = output.replace("\\pagebreak", "")
+    return output
 
 
 def process(
@@ -663,7 +710,7 @@ def process(
     """
     modules: List[ModuleDocumentation] = list(
         map(
-            lambda _: process_module(_, objects_to_ignore, minimal_classes),
+            lambda _: _process_module(_, objects_to_ignore, minimal_classes),
             modules_to_document,
         )
     )
@@ -673,28 +720,28 @@ def process(
         contents: List[str] = []
         mod: ModuleDocumentation
         for mod in modules:
-            link: str = escape_link(mod.name.lower())
+            link: str = _escape_link(mod.name.lower())
             contents.append(f"- [{mod.name}](#{link})")
             cls: ClassDocumentation
             for cls in mod.classes:
-                link = escape_link(f"{mod.name.lower()}-{cls.name.lower()}")
+                link = _escape_link(f"{mod.name.lower()}-{cls.name.lower()}")
                 contents.append(f"\t- [{cls.name}](#{link})")
                 met: MethodDocumentation
                 for met in cls.methods:
-                    link = escape_link(
+                    link = _escape_link(
                         f"{mod.name.lower()}-{cls.name.lower()}-{met.name.lower()}"
                     )
                     contents.append(f"\t\t- [{met.name}](#{link})")
             func: FunctionDocumentation
             for func in mod.functions:
-                link = escape_link(f"{mod.name.lower()}-{func.name.lower()}")
+                link = _escape_link(f"{mod.name.lower()}-{func.name.lower()}")
                 contents.append(f"\t- [{func.name}](#{link})")
             markdown.extend(mod.to_markdown())
         while contents:
             markdown.insert(0, contents.pop())
         markdown.insert(0, "**Table of Contents**\n")
     markdown.insert(0, f"{description}\n")
-    markdown.insert(0, f"# {title} API\n")
+    markdown.insert(0, f"# {title}\n")
     output: str = "\n".join(markdown)
     if not latex_pagebreak:
         output = output.replace("\\pagebreak", "")
