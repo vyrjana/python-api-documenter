@@ -93,20 +93,8 @@ class ParameterDocumentation:
     description: str
 
     def to_markdown(self) -> List[str]:
-        signature: str = self.name
-        if self.annotation:
-            signature += f": {self.annotation}"
-        if self.default != Parameter.empty:
-            if type(self.default) is str:
-                signature += f' = "{self.default}"'
-            else:
-                signature += f" = {self.default}"
         return [
-            "```python",
-            signature,
-            "```",
-            f"- {self.description}" if self.description else "",
-            "",
+            f"- `{self.name}`" + (f": {self.description}" if self.description else ""),
         ]
 
 
@@ -138,7 +126,7 @@ class FunctionDocumentation:
         else:
             signature += "):"
         markdown: List[str] = [
-            f"## **{function_name}**",
+            f"### **{function_name}**",
             f"\n{self.description}\n" if self.description else "\n",
             "```python",
             signature,
@@ -146,13 +134,14 @@ class FunctionDocumentation:
             "",
         ]
         if self.parameters:
-            markdown.append("_Parameters_")
+            markdown.append("\n_Parameters_\n")
             for param in self.parameters:
                 markdown.extend(param.to_markdown())
+            markdown.append("")
         if self.return_annotation:
             markdown.extend(
                 [
-                    "_Returns_",
+                    "\n_Returns_\n",
                     "```python",
                     self.return_annotation,
                     "```",
@@ -189,7 +178,7 @@ class MethodDocumentation:
         else:
             signature += "):"
         markdown: List[str] = [
-            f"### **{method_name}**",
+            f"#### **{method_name}**",
             f"\n{self.description}\n" if self.description else "\n",
             "```python",
             signature,
@@ -199,15 +188,16 @@ class MethodDocumentation:
         if self.parameters and not (
             len(self.parameters) == 1 and self.parameters[0].name in ["self", "Class"]
         ):
-            markdown.append("_Parameters_\n")
+            markdown.append("\n_Parameters_\n")
             for param in self.parameters:
                 if param.name == "self" or param.name == "Class":
                     continue
                 markdown.extend(param.to_markdown())
+            markdown.append("")
         if self.return_annotation:
             markdown.extend(
                 [
-                    "_Returns_",
+                    "\n_Returns_",
                     "```python",
                     self.return_annotation,
                     "```\n",
@@ -244,7 +234,7 @@ class ClassDocumentation:
                     else:
                         signature += f" = {param.default}"
         markdown: List[str] = [
-            f"## **{class_name}**",
+            f"### **{class_name}**",
             f"\n{self.description}\n" if self.description else "",
             "```python",
             signature,
@@ -256,6 +246,7 @@ class ClassDocumentation:
                 if param.name == "self" or param.name == "Class":
                     continue
                 markdown.extend(param.to_markdown())
+            markdown.append("")
         if self.methods:
             markdown.append("\n_Functions and methods_\n")
             met: MethodDocumentation
@@ -275,7 +266,7 @@ class ModuleDocumentation:
     def to_markdown(self) -> List[str]:
         markdown: List[str] = [
             "\n\\pagebreak\n",
-            f"# **{self.name}**",
+            f"## **{self.name}**",
             self.description,
         ]
         for cls in self.classes:
@@ -394,6 +385,7 @@ def _process_function(func) -> FunctionDocumentation:
     default: Any
     if docstring_parameters:
         assert len(docstring_parameters) == len(signature.parameters), (
+            name,
             len(docstring_parameters),
             len(signature.parameters),
         )
@@ -640,22 +632,63 @@ def process_functions(
 def process_classes(
     classes_to_document: list,
     module_name: str,
+    table_of_contents: bool = True,
     minimal_classes: list = [],
     objects_to_ignore: list = [],
     latex_pagebreak: bool = False,
 ) -> str:
     """
-    TODO
+    Parameters
+    ----------
+    classes_to_document: list
+        A list of classes to process and document.
+
+    module_name: str
+        The name of the parent module.
+
+    table_of_contents: bool = True
+        If true, then a table of contents with links will be generated.
+    
+    minimal_classes: list = []
+        Any classes included in this list will only have their constructor documented.
+        Useful in cases where multiple subclasses could cause a lot of unnecessary duplicate entries when it would have been enough to just document the parent class.
+    
+    objects_to_ignore: list = []
+        Any objects (e.g., classes, methods, functions) included in this list will be ignored.
+    
+    latex_pagebreak: bool = False
+        If true, then a LaTeX-style page break will be inserted before each module and after each class.
+        This could be useful if the intention is to convert the Markdown document into a PDF using Pandoc.
+
+    Returns
+    -------
+    str
     """
     class_documentations: List[ClassDocumentation] = []
     for cls in classes_to_document:
         assert inspect.isclass(cls), type(cls)
-        class_documentations.append(_process_class(cls, objects_to_ignore, minimal_classes))
+        class_documentations.append(
+            _process_class(cls, objects_to_ignore, minimal_classes)
+        )
     class_documentations.sort(key=lambda _: _.name)
     markdown: List[str] = []
-    doc: ClassDocumentation
-    for doc in class_documentations:
-        markdown.extend(doc.to_markdown(module_name))
+    contents: List[str] = []
+    cls: ClassDocumentation
+    for cls in class_documentations:
+        link: str = _escape_link(f"{module_name.lower()}{cls.name.lower()}")
+        contents.append(f"- [{cls.name}](#{link})")
+        met: MethodDocumentation
+        for met in cls.methods:
+            link = _escape_link(
+                f"{module_name.lower()}{cls.name.lower()}{met.name.lower()}"
+            )
+            contents.append(f"\t- [{met.name}](#{link})")
+        markdown.extend(cls.to_markdown(module_name))
+    if table_of_contents:
+        markdown.insert(0, "\n")
+        while contents:
+            markdown.insert(0, contents.pop())
+        markdown.insert(0, "**Table of Contents**\n")
     output: str = "\n".join(markdown)
     if not latex_pagebreak:
         output = output.replace("\\pagebreak", "")
@@ -681,7 +714,7 @@ def process(
     ----------
     title: str
         The main title/heading in the generated Markdown document.
-        This could be e.g. the name of the package.
+        This could be e.g., the name of the package.
 
     modules_to_document: list
         A list of modules to process and document.
@@ -698,7 +731,7 @@ def process(
         Useful in cases where multiple subclasses could cause a lot of unnecessary duplicate entries when it would have been enough to just document the parent class.
 
     objects_to_ignore: list = []
-        Any objects (e.g. modules, classes, methods, functions) included in this list will be ignored.
+        Any objects (e.g., modules, classes, methods, functions) included in this list will be ignored.
 
     latex_pagebreak: bool = False
         If true, then a LaTeX-style page break will be inserted before each module and after each class.
@@ -716,32 +749,33 @@ def process(
     )
     modules.sort(key=lambda _: _.name)
     markdown: List[str] = []
+    contents: List[str] = []
+    mod: ModuleDocumentation
+    for mod in modules:
+        link: str = _escape_link(mod.name.lower())
+        contents.append(f"- [{mod.name}](#{link})")
+        cls: ClassDocumentation
+        for cls in mod.classes:
+            link = _escape_link(f"{mod.name.lower()}{cls.name.lower()}")
+            contents.append(f"\t- [{cls.name}](#{link})")
+            met: MethodDocumentation
+            for met in cls.methods:
+                link = _escape_link(
+                    f"{mod.name.lower()}{cls.name.lower()}{met.name.lower()}"
+                )
+                contents.append(f"\t\t- [{met.name}](#{link})")
+        func: FunctionDocumentation
+        for func in mod.functions:
+            link = _escape_link(f"{mod.name.lower()}{func.name.lower()}")
+            contents.append(f"\t- [{func.name}](#{link})")
+        markdown.extend(mod.to_markdown())
     if table_of_contents:
-        contents: List[str] = []
-        mod: ModuleDocumentation
-        for mod in modules:
-            link: str = _escape_link(mod.name.lower())
-            contents.append(f"- [{mod.name}](#{link})")
-            cls: ClassDocumentation
-            for cls in mod.classes:
-                link = _escape_link(f"{mod.name.lower()}-{cls.name.lower()}")
-                contents.append(f"\t- [{cls.name}](#{link})")
-                met: MethodDocumentation
-                for met in cls.methods:
-                    link = _escape_link(
-                        f"{mod.name.lower()}-{cls.name.lower()}-{met.name.lower()}"
-                    )
-                    contents.append(f"\t\t- [{met.name}](#{link})")
-            func: FunctionDocumentation
-            for func in mod.functions:
-                link = _escape_link(f"{mod.name.lower()}-{func.name.lower()}")
-                contents.append(f"\t- [{func.name}](#{link})")
-            markdown.extend(mod.to_markdown())
         while contents:
             markdown.insert(0, contents.pop())
         markdown.insert(0, "**Table of Contents**\n")
     markdown.insert(0, f"{description}\n")
-    markdown.insert(0, f"# {title}\n")
+    if title != "":
+        markdown.insert(0, f"# {title}\n")
     output: str = "\n".join(markdown)
     if not latex_pagebreak:
         output = output.replace("\\pagebreak", "")
