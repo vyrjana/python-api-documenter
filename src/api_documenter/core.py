@@ -642,6 +642,7 @@ def _escape_link(link: str) -> str:
 
 def process_functions(
     functions_to_document: list,
+    module_name: str,
     latex_pagebreak: bool = False,
 ) -> str:
     """
@@ -655,7 +656,7 @@ def process_functions(
     markdown: List[str] = []
     doc: FunctionDocumentation
     for func in function_documentations:
-        markdown.extend(doc.to_markdown())
+        markdown.extend(doc.to_markdown(module_name))
     output: str = "\n".join(markdown)
     if not latex_pagebreak:
         output = output.replace("\\pagebreak", "")
@@ -698,10 +699,10 @@ def process_classes(
     str
     """
     class_documentations: List[ClassDocumentation] = []
-    for cls in classes_to_document:
-        assert inspect.isclass(cls), type(cls)
+    for Class in classes_to_document:
+        assert inspect.isclass(Class), type(Class)
         class_documentations.append(
-            _process_class(cls, objects_to_ignore, minimal_classes)
+            _process_class(Class, objects_to_ignore, minimal_classes)
         )
     class_documentations.sort(key=lambda _: _.name)
     markdown: List[str] = []
