@@ -22,8 +22,9 @@
 #
 import inspect
 from inspect import Signature, Parameter
+from re import match as regex_match
 from string import ascii_letters
-from typing import Any, List, Tuple
+from typing import Any, List, Match, Optional, Tuple
 from dataclasses import dataclass
 
 
@@ -276,6 +277,30 @@ class ModuleDocumentation:
         return markdown
 
 
+def _update_docstring_indentation(lines: List[str]) -> List[str]:
+    line: str
+    while lines:
+        line = lines.pop(0)
+        if line.strip() != "":
+            lines.insert(0, line)
+            break
+    while lines:
+        line = lines.pop()
+        if line.strip() != "":
+            lines.append(line)
+            break
+    if lines:
+        indent_match: Optional[Match] = regex_match(r"^(\s+)", lines[0])
+        if indent_match is not None:
+            indent: str = indent_match.group(1)
+            i: int
+            for i in range(0, len(lines)):
+                line = lines[i]
+                if line.startswith(indent):
+                    lines[i] = line[len(indent) :].rstrip()
+    return lines
+
+
 def _extract_docstring_preamble(lines: List[str]) -> str:
     if not lines:
         return ""
@@ -372,7 +397,9 @@ def _process_function(func) -> FunctionDocumentation:
     assert "TODO" not in (
         func.__doc__ or ""
     ), f"The docstring for the function {func} is incomplete!"
-    docstring: List[str] = (func.__doc__ or "").split("\n")
+    docstring: List[str] = _update_docstring_indentation(
+        (func.__doc__ or "").split("\n")
+    )
     name: str = func.__name__
     description: str = _extract_docstring_preamble(docstring)
     signature: Signature = inspect.signature(func)
@@ -433,7 +460,9 @@ def _process_method(met) -> MethodDocumentation:
     assert "TODO" not in (
         met.__doc__ or ""
     ), f"The docstring for the method {met} is incomplete!"
-    docstring: List[str] = (met.__doc__ or "").split("\n")
+    docstring: List[str] = _update_docstring_indentation(
+        (met.__doc__ or "").split("\n")
+    )
     name: str = met.__name__
     description: str = _extract_docstring_preamble(docstring)
     signature: Signature = inspect.signature(met)
@@ -505,7 +534,9 @@ def _process_method(met) -> MethodDocumentation:
 def _process_class(
     cls, objects_to_ignore: list, minimal_classes: list
 ) -> ClassDocumentation:
-    docstring: List[str] = (cls.__doc__ or "").split("\n")
+    docstring: List[str] = _update_docstring_indentation(
+        (cls.__doc__ or "").split("\n")
+    )
     name: str = cls.__name__
     parents: str = ", ".join(list(map(lambda _: _.__name__, cls.__bases__)))
     description: str = _extract_docstring_preamble(docstring)
@@ -583,7 +614,9 @@ def _process_class(
 def _process_module(
     mod, objects_to_ignore: list, minimal_classes: list
 ) -> ModuleDocumentation:
-    docstring: List[str] = (mod.__doc__ or "").split("\n")
+    docstring: List[str] = _update_docstring_indentation(
+        (mod.__doc__ or "").split("\n")
+    )
     name: str = mod.__name__
     description: str = _extract_docstring_preamble(docstring)
     classes: List[ClassDocumentation] = []
