@@ -682,14 +682,14 @@ def process_classes(
 
     table_of_contents: bool = True
         If true, then a table of contents with links will be generated.
-    
+
     minimal_classes: list = []
         Any classes included in this list will only have their constructor documented.
         Useful in cases where multiple subclasses could cause a lot of unnecessary duplicate entries when it would have been enough to just document the parent class.
-    
+
     objects_to_ignore: list = []
         Any objects (e.g., classes, methods, functions) included in this list will be ignored.
-    
+
     latex_pagebreak: bool = False
         If true, then a LaTeX-style page break will be inserted before each module and after each class.
         This could be useful if the intention is to convert the Markdown document into a PDF using Pandoc.
