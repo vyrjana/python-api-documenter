@@ -636,7 +636,7 @@ def _process_module(
 
 
 def _escape_link(link: str) -> str:
-    link = link.replace(".", "-")
+    link = link.replace(".", "")
     return link
 
 
