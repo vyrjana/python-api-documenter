@@ -330,7 +330,7 @@ def _extract_name_annotation_default(line: str) -> Tuple[str, str, str]:
         default.endswith('"') or default.endswith("'")
     ):
         default = default[1:-1]
-    assert name != ""
+    assert name != "", line
     return (
         name,
         annotation,
@@ -412,6 +412,7 @@ def _process_function(func) -> FunctionDocumentation:
     default: Any
     if docstring_parameters:
         assert len(docstring_parameters) == len(signature.parameters), (
+            func,
             name,
             len(docstring_parameters),
             len(signature.parameters),
@@ -429,11 +430,13 @@ def _process_function(func) -> FunctionDocumentation:
             assert doc_param.annotation == (
                 _simplify_annotation(sig_param.annotation)
             ), (
+                func,
                 doc_param.annotation,
                 _simplify_annotation(sig_param.annotation),
             )
             default = sig_param.default if sig_param.default != Parameter.empty else ""
             assert doc_param.default == str(default), (
+                func,
                 doc_param.default,
                 default,
             )
@@ -450,7 +453,7 @@ def _process_function(func) -> FunctionDocumentation:
                 )
             )
     return_annotation: str = _simplify_annotation(signature.return_annotation)
-    assert _extract_docstring_returns(docstring) in [return_annotation, ""]
+    assert _extract_docstring_returns(docstring) in [return_annotation, ""], func
     return FunctionDocumentation(
         name, signature_parameters, return_annotation, description
     )
@@ -475,6 +478,7 @@ def _process_method(met) -> MethodDocumentation:
     default: Any
     if docstring_parameters:
         assert len(docstring_parameters) in [
+            met,
             len(signature.parameters),  # Normal/class methods
             len(signature.parameters) - 1,  # Static methods
         ], (
@@ -499,11 +503,13 @@ def _process_method(met) -> MethodDocumentation:
             assert doc_param.annotation == (
                 _simplify_annotation(sig_param.annotation)
             ), (
+                met,
                 doc_param.annotation,
                 _simplify_annotation(sig_param.annotation),
             )
             default = sig_param.default if sig_param.default != Parameter.empty else ""
             assert doc_param.default == str(default), (
+                met,
                 doc_param.default,
                 default,
             )
@@ -525,7 +531,7 @@ def _process_method(met) -> MethodDocumentation:
                     )
                 )
     return_annotation: str = _simplify_annotation(signature.return_annotation)
-    assert _extract_docstring_returns(docstring) in [return_annotation, ""]
+    assert _extract_docstring_returns(docstring) in [return_annotation, ""], met
     return MethodDocumentation(
         name, signature_parameters, return_annotation, description
     )
@@ -550,6 +556,7 @@ def _process_class(
             ParameterDocumentation
         ] = _extract_docstring_parameters(docstring)
         assert len(docstring_parameters) == len(signature.parameters) - 1, (
+            cls,
             len(docstring_parameters),
             len(signature.parameters) - 1,
         )
@@ -571,11 +578,13 @@ def _process_class(
             assert doc_param.annotation == (
                 _simplify_annotation(sig_param.annotation)
             ), (
+                cls,
                 doc_param.annotation,
                 _simplify_annotation(sig_param.annotation),
             )
             default = sig_param.default if sig_param.default != Parameter.empty else ""
             assert doc_param.default == str(default), (
+                cls,
                 doc_param.default,
                 default,
             )
@@ -650,7 +659,7 @@ def process_functions(
     """
     function_documentations: List[FunctionDocumentation] = []
     for func in functions_to_document:
-        assert inspect.isfunction(func), type(func)
+        assert inspect.isfunction(func), (func, type(func),)
         function_documentations.append(_process_function(func))
     function_documentations.sort(key=lambda _: _.name)
     markdown: List[str] = []
@@ -700,7 +709,7 @@ def process_classes(
     """
     class_documentations: List[ClassDocumentation] = []
     for Class in classes_to_document:
-        assert inspect.isclass(Class), type(Class)
+        assert inspect.isclass(Class), (Class, type(Class),)
         class_documentations.append(
             _process_class(Class, objects_to_ignore, minimal_classes)
         )
