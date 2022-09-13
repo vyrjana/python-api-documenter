@@ -387,7 +387,9 @@ def _extract_docstring_parameters(lines: List[str]) -> List[ParameterDocumentati
                 break
             elif line.strip() == "":
                 break
-            description.append(line.strip())
+            description.append(
+                line.strip() if not line.strip().startswith("- ") else line
+            )
         parameters.append(
             ParameterDocumentation(
                 name,
