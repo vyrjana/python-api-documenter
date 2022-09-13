@@ -638,7 +638,9 @@ def _process_class(
     return ClassDocumentation(
         name,
         parents,
-        signature_parameters if "Enum" not in parents else [],
+        signature_parameters
+        if "Enum" not in parents and "Exception" not in parents
+        else [],
         methods if cls not in minimal_classes else [],
         description,
     )
