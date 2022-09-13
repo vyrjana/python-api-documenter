@@ -301,6 +301,25 @@ def _update_docstring_indentation(lines: List[str]) -> List[str]:
     return lines
 
 
+def _escape_docstring(lines: List[str]) -> List[str]:
+    result: List[str] = lines[:]
+    i: int
+    line: str
+    # Escape pipes (i.e., "|")
+    in_table: bool = False
+    for i, line in enumerate(result):
+        if "|" not in line:
+            in_table = False
+            continue
+        elif in_table:
+            continue
+        if line.strip().startswith("|") and line.strip().endswith("|"):
+            in_table = True
+            continue
+        result[i] = line.replace("|", "\|")
+    return result
+
+
 def _extract_docstring_preamble(lines: List[str]) -> str:
     if not lines:
         return ""
@@ -311,7 +330,7 @@ def _extract_docstring_preamble(lines: List[str]) -> str:
             lines.insert(0, line)
             break
         preamble.append(line)
-    return "\n".join(preamble).strip()
+    return "\n".join(_escape_docstring(preamble)).strip()
 
 
 def _extract_name_annotation_default(line: str) -> Tuple[str, str, str]:
@@ -370,7 +389,12 @@ def _extract_docstring_parameters(lines: List[str]) -> List[ParameterDocumentati
                 break
             description.append(line.strip())
         parameters.append(
-            ParameterDocumentation(name, annotation, default, "\n".join(description))
+            ParameterDocumentation(
+                name,
+                annotation,
+                default,
+                "\n".join(_escape_docstring(description)),
+            )
         )
     return parameters
 
@@ -659,7 +683,10 @@ def process_functions(
     """
     function_documentations: List[FunctionDocumentation] = []
     for func in functions_to_document:
-        assert inspect.isfunction(func), (func, type(func),)
+        assert inspect.isfunction(func), (
+            func,
+            type(func),
+        )
         function_documentations.append(_process_function(func))
     function_documentations.sort(key=lambda _: _.name)
     markdown: List[str] = []
@@ -709,7 +736,10 @@ def process_classes(
     """
     class_documentations: List[ClassDocumentation] = []
     for Class in classes_to_document:
-        assert inspect.isclass(Class), (Class, type(Class),)
+        assert inspect.isclass(Class), (
+            Class,
+            type(Class),
+        )
         class_documentations.append(
             _process_class(Class, objects_to_ignore, minimal_classes)
         )
