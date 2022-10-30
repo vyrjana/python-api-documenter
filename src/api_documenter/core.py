@@ -695,7 +695,7 @@ def process_functions(
     function_documentations.sort(key=lambda _: _.name)
     markdown: List[str] = []
     doc: FunctionDocumentation
-    for func in function_documentations:
+    for doc in function_documentations:
         markdown.extend(doc.to_markdown(module_name))
     output: str = "\n".join(markdown)
     if not latex_pagebreak:
