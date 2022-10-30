@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="api-documenter",
-    version="0.2.6",
+    version="0.2.7",
     author="Ville Yrjänä",
     packages=find_packages(where="src"),
     package_dir={"": "src"},
