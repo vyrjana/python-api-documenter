@@ -1,7 +1,9 @@
 # python-api-documenter
 
+**NO LONGER UNDER ACTIVE DEVELOPMENT/MAINTENANCE**
+
 A package for conveniently generating documentation of a Python API through introspection.
-Used by the following projects:
+Previously used by the following projects:
 
 - [pyimpspec](https://github.com/vyrjana/pyimpspec)
 - [DearEIS](https://github.com/vyrjana/DearEIS)
